@@ -1,0 +1,61 @@
+-- Step 1: Create the main table
+CREATE TABLE Library (
+    book_id      NUMBER PRIMARY KEY,
+    title        VARCHAR2(100),
+    author       VARCHAR2(100),
+    published_on DATE
+);
+
+-- Step 2: Create the audit table
+CREATE TABLE Library_Audit (
+    audit_id     NUMBER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    book_id      NUMBER,
+    title        VARCHAR2(100),
+    author       VARCHAR2(100),
+    published_on DATE,
+    action       VARCHAR2(10),
+    action_time  TIMESTAMP
+);
+
+-- Step 3: Insert sample data
+INSERT INTO Library (book_id, title, author, published_on)
+VALUES (1, 'The Alchemist', 'Paulo Coelho', DATE '1993-06-01');
+
+INSERT INTO Library (book_id, title, author, published_on)
+VALUES (2, '1984', 'George Orwell', DATE '1949-06-08');
+
+COMMIT;
+
+-- Step 4: Create BEFORE UPDATE trigger
+CREATE OR REPLACE TRIGGER trg_before_update_library
+BEFORE UPDATE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit (book_id, title, author, published_on, action, action_time)
+    VALUES (:OLD.book_id, :OLD.title, :OLD.author, :OLD.published_on, 'UPDATE', SYSTIMESTAMP);
+END;
+/
+
+-- Step 5: Create BEFORE DELETE trigger
+CREATE OR REPLACE TRIGGER trg_before_delete_library
+BEFORE DELETE ON Library
+FOR EACH ROW
+BEGIN
+    INSERT INTO Library_Audit (book_id, title, author, published_on, action, action_time)
+    VALUES (:OLD.book_id, :OLD.title, :OLD.author, :OLD.published_on, 'DELETE', SYSTIMESTAMP);
+END;
+/
+
+-- Step 6: Perform update operation
+UPDATE Library
+SET title = 'The Alchemist - Revised Edition'
+WHERE book_id = 1;
+
+-- Step 7: Perform delete operation
+DELETE FROM Library
+WHERE book_id = 2;
+
+COMMIT;
+
+-- Step 8: View audit log
+SELECT * FROM Library_Audit;
